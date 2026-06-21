@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lightless Syncshell Group Examiner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://unpkg.com/vis-network/styles/vis-network.min.css" rel="stylesheet" type="text/css" />
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+</head>
+<body>
+    <!-- App Container -->
+    <div class="app-container">
+        
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="16" cy="16" r="14" stroke="url(#paint0_linear)" stroke-width="2"/>
+                    <path d="M16 4C9.37258 4 4 9.37258 4 16C4 18.2323 4.60838 20.3228 5.67049 22.1228L26.3295 9.87722C24.3228 6.60838 20.3228 4 16 4Z" fill="url(#paint1_linear)"/>
+                    <defs>
+                        <linearGradient id="paint0_linear" x1="2" y1="2" x2="30" y2="30" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#a855f7"/>
+                            <stop offset="1" stop-color="#06b6d4"/>
+                        </linearGradient>
+                        <linearGradient id="paint1_linear" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#a855f7" stop-opacity="0.8"/>
+                            <stop offset="1" stop-color="#06b6d4" stop-opacity="0.2"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <div class="header-text">
+                    <h1>Lightless Group Examiner</h1>
+                    <p class="subtitle">Syncshell Overlap &amp; Composition Inspector</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button id="refresh-btn" class="btn btn-secondary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                    Refresh Logs
+                </button>
+                <span id="data-status" class="status-indicator status-online">Connected</span>
+            </div>
+        </header>
+
+        <!-- Data Source Status Banner -->
+        <div id="data-source-banner" class="banner-container hidden">
+            <div class="banner-icon-wrapper">
+                <span id="banner-icon"></span>
+            </div>
+            <div class="banner-body">
+                <h4 id="banner-title">Loading...</h4>
+                <p id="banner-description">Determining data status.</p>
+            </div>
+        </div>
+
+        <!-- Dashboard Metrics Grid -->
+        <section class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <div class="metric-info">
+                    <h3 id="metric-groups">-</h3>
+                    <p>Total Syncshells</p>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <div class="metric-info">
+                    <h3 id="metric-players">-</h3>
+                    <p>Unique Sync Players</p>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 18.72a6 6 0 0 0 1-3.72V9a7 7 0 0 0-14 0v6a6 6 0 0 0 1 3.72L3 21h18z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                </div>
+                <div class="metric-info">
+                    <h3 id="metric-redundancy">-</h3>
+                    <p>Average Redundancy</p>
+                </div>
+            </div>
+            <div class="metric-card highlight-metric">
+                <div class="metric-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11-9 9V9l9-9 9 9v11z"/></svg>
+                </div>
+                <div class="metric-info">
+                    <h3 id="metric-safe-leave">-</h3>
+                    <p>Zero Impact Groups</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Workspace -->
+        <main class="app-workspace">
+            
+            <!-- Controls / Filters -->
+            <section class="controls-bar">
+                <div class="search-box">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" id="group-search" placeholder="Search by Syncshell Name or GID...">
+                </div>
+                
+                <div class="controls-right">
+                    <div class="control-item">
+                        <span class="filter-label">Character:</span>
+                        <select id="character-select" class="sort-select">
+                            <!-- Dynamically populated by JS -->
+                        </select>
+                    </div>
+
+                    <div class="control-item">
+                        <span class="filter-label">Leave Impact:</span>
+                        <div class="filter-buttons">
+                            <button class="btn btn-filter active" data-filter="all">All</button>
+                            <button class="btn btn-filter" data-filter="None">None</button>
+                            <button class="btn btn-filter" data-filter="Low">Low</button>
+                            <button class="btn btn-filter" data-filter="Medium">Medium</button>
+                            <button class="btn btn-filter" data-filter="High">High</button>
+                        </div>
+                    </div>
+                    
+                    <div class="control-item">
+                        <span class="filter-label">Sort:</span>
+                        <select id="group-sort" class="sort-select">
+                            <option value="leave-impact-asc">Leave Impact (Low to High)</option>
+                            <option value="leave-impact-desc">Leave Impact (High to Low)</option>
+                            <option value="redundancy-desc">Redundancy (High to Low)</option>
+                            <option value="redundancy-asc">Redundancy (Low to High)</option>
+                            <option value="members-desc">Synced Players (Most to Least)</option>
+                            <option value="members-asc">Synced Players (Least to Most)</option>
+                            <option value="name-asc">Name (A-Z)</option>
+                        </select>
+                    </div>
+
+                    <div class="control-item">
+                        <span class="filter-label">View:</span>
+                        <div class="view-toggle-buttons">
+                            <button id="view-grid-btn" class="btn btn-view active" title="Grid View">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                            </button>
+                            <button id="view-list-btn" class="btn btn-view" title="List View">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                            </button>
+                            <button id="view-network-btn" class="btn btn-view" title="Network Graph View">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Loading overlay -->
+            <div id="loading-spinner" class="loading-overlay">
+                <div class="spinner"></div>
+                <p>Analyzing local plug-in logs...</p>
+            </div>
+
+            <!-- Groups Listing (HTML Grid) -->
+            <div id="groups-container" class="groups-grid">
+                <!-- Javascript will inject cards here -->
+            </div>
+
+            <!-- Network Graph Container (Vis-Network) -->
+            <div id="network-container" class="network-view-container hidden">
+                <div id="network-graph" class="network-graph-canvas"></div>
+                <div class="network-legend">
+                    <div class="legend-title">Leave Impact</div>
+                    <div class="legend-item"><span class="legend-dot dot-none"></span> None Impact</div>
+                    <div class="legend-item"><span class="legend-dot dot-low"></span> Low Impact</div>
+                    <div class="legend-item"><span class="legend-dot dot-medium"></span> Medium Impact</div>
+                    <div class="legend-item"><span class="legend-dot dot-high"></span> High Impact</div>
+                    <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 0.5rem 0;">
+                    <button id="toggle-physics-btn" class="btn btn-secondary" style="width: 100%; padding: 0.35rem 0.75rem; font-size: 0.75rem; justify-content: center; gap: 0.35rem;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="9" y1="9" x2="9" y2="15"></line>
+                            <line x1="15" y1="9" x2="15" y2="15"></line>
+                        </svg>
+                        Freeze Layout
+                    </button>
+                </div>
+                <div class="network-hint">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span>Click nodes to inspect syncshells. Drag nodes to explore. Scroll to zoom.</span>
+                </div>
+            </div>
+
+        </main>
+        
+        <!-- Detailed Overlay Drawer (Initially Hidden) -->
+        <aside id="detail-drawer" class="detail-drawer hidden">
+            <div class="drawer-header">
+                <div class="drawer-title-area">
+                    <h2 id="drawer-group-name">Group Name</h2>
+                    <span id="drawer-group-gid" class="badge badge-gid">GID</span>
+                </div>
+                <button id="drawer-close" class="btn-close">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <div class="drawer-body">
+                <!-- Overall metrics for this group -->
+                <div class="drawer-metrics">
+                    <div class="drawer-metric-box">
+                        <span class="value" id="drawer-metric-total">0</span>
+                        <span class="label">Total Members</span>
+                    </div>
+                    <div class="drawer-metric-box">
+                        <span class="value text-warning" id="drawer-metric-unique">0</span>
+                        <span class="label">Unique Members</span>
+                    </div>
+                    <div class="drawer-metric-box">
+                        <span class="value text-success" id="drawer-metric-redundant">0%</span>
+                        <span class="label">Redundancy</span>
+                    </div>
+                </div>
+
+                <!-- Analysis Summary Text -->
+                <div class="analysis-explanation card">
+                    <h3>Impact Analysis</h3>
+                    <p id="drawer-explanation">Calculating...</p>
+                </div>
+
+                <!-- Tab Header -->
+                <div class="tab-header">
+                    <button class="tab-btn active" data-tab="tab-overlaps">Overlap breakdown</button>
+                    <button class="tab-btn" data-tab="tab-uniques">Unique players (<span id="tab-count-uniques">0</span>)</button>
+                    <button class="tab-btn" data-tab="tab-all-members">All players (<span id="tab-count-all">0</span>)</button>
+                </div>
+
+                <!-- Tab Body Content -->
+                <div class="tab-content">
+                    
+                    <!-- Overlaps Tab -->
+                    <div id="tab-overlaps" class="tab-pane active">
+                        <div class="info-alert">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            <span>Shows which other groups contain members of this group.</span>
+                        </div>
+                        <ul id="overlaps-list" class="drawer-list">
+                            <!-- Injected by JS -->
+                        </ul>
+                    </div>
+
+                    <!-- Unique Players Tab -->
+                    <div id="tab-uniques" class="tab-pane">
+                        <div class="warning-alert">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            <span>These players are only synced through this group. Leaving will break connection.</span>
+                        </div>
+                        <ul id="uniques-list" class="drawer-list member-list">
+                            <!-- Injected by JS -->
+                        </ul>
+                    </div>
+
+                    <!-- All Players Tab -->
+                    <div id="tab-all-members" class="tab-pane">
+                        <div class="search-subbox">
+                            <input type="text" id="member-search" placeholder="Search players in this group...">
+                        </div>
+                        <ul id="all-members-list" class="drawer-list member-list">
+                            <!-- Injected by JS -->
+                        </ul>
+                    </div>
+
+                </div>
+            </div>
+        </aside>
+
+        <!-- Background blur overlay for drawer -->
+        <div id="drawer-backdrop" class="drawer-backdrop hidden"></div>
+        
+    </div>
+
+    <!-- Application Script -->
+    <script src="app.js"></script>
+</body>
+</html>
