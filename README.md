@@ -2,7 +2,7 @@
 
 A local dashboard for inspecting your LightlessSync syncshells in FFXIV. See which players appear in multiple groups, which players are unique to a group, and how leaving a syncshell could affect your coverage.
 
-The analyzer runs on your computer and opens in your browser. The GitHub Pages website opens the dashboard in `public/index.html`; loading your LightlessSync data requires the local analyzer.
+The analyzer runs on your computer and opens its browser interface at `http://localhost:8000`.
 
 ## Features
 
@@ -24,7 +24,7 @@ You need Windows, Python 3 available as `python`, a browser, and an existing Lig
    cd LightlessGroupExaminer
    ```
 
-2. In FFXIV, open **LightlessSync settings > Diagnostics > Generate Diagnostics Report**. The analyzer looks for reports named `lightless_diagnostics_*.zip` directly in your LightlessSync configuration folder. Leave the report zipped.
+2. In FFXIV, connect LightlessSync on the character you want to analyze, then open **LightlessSync settings > Diagnostics > Generate Diagnostics Report**. When it finishes, click **Open Location** to find the ZIP. The analyzer looks for reports named `lightless_diagnostics_*.zip` directly in `%APPDATA%\XIVLauncher\pluginConfigs\LightlessSync`. If you moved the ZIP elsewhere, copy it back into that folder. Leave the report zipped.
 
 3. Double-click `start.bat`, or run this from the project folder:
 
@@ -76,24 +76,6 @@ The analyzer reads these files without modifying them. It does not upload your d
 
 A zero-impact group has no unique players in the current data. Assess groups one at a time: two groups can cover each other's players, so leaving every zero-impact group at once can still remove coverage. The app only reports results; it does not leave groups or change LightlessSync settings.
 
-## GitHub Pages website
-
-The root `index.html` redirects directly to `public/index.html`, so the GitHub Pages website opens the dashboard. Its CSS and JavaScript load from the same `public/` folder. `_config.yml` keeps the Python backend and development scripts out of the published site.
-
-To publish it:
-
-1. Commit and push the project files to `main`.
-2. Open the repository's [Settings > Pages](https://github.com/ric6121824/LightlessGroupExaminer/settings/pages).
-3. Set **Source** to **Deploy from a branch**.
-4. Select **main** and **/(root)**, then click **Save**.
-5. Wait for the Pages deployment in the [Actions tab](https://github.com/ric6121824/LightlessGroupExaminer/actions) to finish.
-
-Once deployed, the dashboard will open at:
-
-[https://ric6121824.github.io/LightlessGroupExaminer/](https://ric6121824.github.io/LightlessGroupExaminer/)
-
-On GitHub Pages, the dashboard displays instructions for starting the local analyzer. GitHub Pages serves static content and cannot run the Python backend or read your local LightlessSync folder. Run `python app.py` locally and open `http://localhost:8000` to analyze your data. See GitHub's documentation on [GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages) and [publishing from a branch](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
-
 ## Troubleshooting
 
 | Problem | What to check |
@@ -104,7 +86,6 @@ On GitHub Pages, the dashboard displays instructions for starting the local anal
 | Character is missing or has the wrong data | Check the character selector and ensure that character has a diagnostics ZIP in the configuration folder. |
 | Port 8000 is already in use | Stop the process using it, or run `python -c "from app import run; run(port=8001)"` and open `http://localhost:8001`. |
 | Network graph does not load | Check that your browser can load vis-network from unpkg. |
-| GitHub website returns 404 | Confirm the Pages source is `main` / `/(root)`, the new files are pushed, and the Pages deployment succeeded. |
 
 ## Project layout
 
@@ -114,6 +95,4 @@ start.bat       Windows launcher
 public/         Local dashboard HTML, CSS, and JavaScript
 scratch/        Development and diagnostic scripts
 README.md       Project documentation
-index.html      GitHub Pages redirect to public/index.html
-_config.yml     GitHub Pages / Jekyll configuration
 ```
