@@ -2,7 +2,7 @@
 
 A local dashboard for inspecting your LightlessSync syncshells in FFXIV. See which players appear in multiple groups, which players are unique to a group, and how leaving a syncshell could affect your coverage.
 
-The analyzer runs on your computer and opens in your browser. The GitHub Pages website is the project guide; it does not run the analyzer.
+The analyzer runs on your computer and opens in your browser. The GitHub Pages website opens the dashboard in `public/index.html`; loading your LightlessSync data requires the local analyzer.
 
 ## Features
 
@@ -78,21 +78,21 @@ A zero-impact group has no unique players in the current data. Assess groups one
 
 ## GitHub Pages website
 
-This repository includes a Jekyll project page. `index.md` reuses this README as the website content, and `_config.yml` sets its theme and project URL.
+The root `index.html` redirects directly to `public/index.html`, so the GitHub Pages website opens the dashboard. Its CSS and JavaScript load from the same `public/` folder. `_config.yml` keeps the Python backend and development scripts out of the published site.
 
 To publish it:
 
-1. Commit and push the README, `index.md`, and `_config.yml` to `main`.
+1. Commit and push the project files to `main`.
 2. Open the repository's [Settings > Pages](https://github.com/ric6121824/LightlessGroupExaminer/settings/pages).
 3. Set **Source** to **Deploy from a branch**.
 4. Select **main** and **/(root)**, then click **Save**.
 5. Wait for the Pages deployment in the [Actions tab](https://github.com/ric6121824/LightlessGroupExaminer/actions) to finish.
 
-Once deployed, the project guide will be available at:
+Once deployed, the dashboard will open at:
 
 [https://ric6121824.github.io/LightlessGroupExaminer/](https://ric6121824.github.io/LightlessGroupExaminer/)
 
-GitHub Pages serves static content and cannot run the Python backend or read your local LightlessSync folder. Opening `public/index.html` on Pages will therefore fail when it requests `/api/data`. Run `python app.py` locally to use the dashboard. See GitHub's documentation on [GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages) and [publishing from a branch](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
+On GitHub Pages, the dashboard displays instructions for starting the local analyzer. GitHub Pages serves static content and cannot run the Python backend or read your local LightlessSync folder. Run `python app.py` locally and open `http://localhost:8000` to analyze your data. See GitHub's documentation on [GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages) and [publishing from a branch](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
 
 ## Troubleshooting
 
@@ -114,6 +114,6 @@ start.bat       Windows launcher
 public/         Local dashboard HTML, CSS, and JavaScript
 scratch/        Development and diagnostic scripts
 README.md       Project documentation
-index.md        GitHub Pages entry page
+index.html      GitHub Pages redirect to public/index.html
 _config.yml     GitHub Pages / Jekyll configuration
 ```

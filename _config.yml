@@ -1,13 +1,10 @@
 title: Lightless Group Examiner
 description: Inspect LightlessSync syncshell overlap, unique players, and redundancy.
-theme: jekyll-theme-midnight
 url: "https://ric6121824.github.io"
 baseurl: "/LightlessGroupExaminer"
-show_downloads: true
 exclude:
   - app.py
   - start.bat
-  - public
   - scratch
   - LightlessClient
   - __pycache__

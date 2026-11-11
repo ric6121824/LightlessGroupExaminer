@@ -70,6 +70,18 @@ const els = {
 
 // Fetch Data from Python Backend
 async function fetchData(uid = null) {
+    if (window.location.hostname.endsWith('.github.io')) {
+        showLoading(false);
+        els.dataStatus.className = 'status-indicator';
+        els.dataStatus.textContent = 'Local app required';
+        els.dataSourceBanner.classList.remove('hidden', 'banner-success');
+        els.dataSourceBanner.classList.add('banner-warning');
+        els.bannerTitle.textContent = 'Open the local analyzer to load your groups';
+        els.bannerDescription.innerHTML = 'Run <strong>python app.py</strong> from the project folder, then open <a href="http://localhost:8000">http://localhost:8000</a>. Your LightlessSync files are read on your computer.';
+        els.groupsContainer.innerHTML = '<div class="no-data-msg" style="grid-column: 1 / -1; padding: 4rem;">Your groups will appear in the local analyzer after it starts.</div>';
+        return;
+    }
+
     showLoading(true);
     els.dataStatus.className = 'status-indicator status-loading';
     els.dataStatus.textContent = 'Syncing...';
