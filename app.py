@@ -210,6 +210,7 @@ class SyncshellAnalyzer:
         # 3. Parse diagnostics report zip if found, otherwise fall back to logs chronologically
         groups = {}
         log_uid_names = {}
+        online_status = {}
         
         data_source = "logs_incomplete"
         diagnostics_timestamp = None
@@ -272,6 +273,12 @@ class SyncshellAnalyzer:
                                         p_note = line_strip[len("Note:"):].strip()
                                         if p_note and p_note != "(none)":
                                             player_note = p_note
+                                        continue
+
+                                    if line_strip.startswith("Online:"):
+                                        status = line_strip[len("Online:"):].strip().casefold()
+                                        if status in ("yes", "true", "no", "false"):
+                                            online_status[uid] = status in ("yes", "true")
                                         continue
                                         
                                     if line_strip == "Syncshell Memberships":
@@ -377,27 +384,28 @@ class SyncshellAnalyzer:
             name = notes_uid_names.get(uid, "") or config_uid_names.get(uid, "") or log_uid_names.get(uid, "") or uid
             final_members[uid] = name
 
+        known_status_uids = all_uids.intersection(online_status) if data_source == "diagnostics_report" else set()
+        online_uids = {uid for uid in known_status_uids if online_status[uid]}
+
         # 4. Perform overlap and redundancy analysis
         group_list = []
         for gid, gdata in groups.items():
             members_set = gdata["members"]
             
-            # Find all members in OTHER groups
-            other_members = set()
-            for other_gid, other_gdata in groups.items():
-                if other_gid != gid:
-                    other_members.update(other_gdata["members"])
-                    
-            shared_members = members_set.intersection(other_members)
-            unique_members = members_set.difference(other_members)
-            
-            # Find detailed overlaps with each individual group
+            shared_members = set()
             overlaps = {}
+            online_overlaps = {}
             for other_gid, other_gdata in groups.items():
                 if other_gid != gid:
                     shared_with_other = members_set.intersection(other_gdata["members"])
                     if shared_with_other:
+                        shared_members.update(shared_with_other)
                         overlaps[other_gid] = len(shared_with_other)
+                        online_shared_count = len(shared_with_other.intersection(online_uids))
+                        if online_shared_count:
+                            online_overlaps[other_gid] = online_shared_count
+
+            unique_members = members_set.difference(shared_members)
 
             total_count = len(members_set)
             shared_count = len(shared_members)
@@ -416,6 +424,22 @@ class SyncshellAnalyzer:
             else:
                 leave_impact = "High"
 
+            online = None
+            if known_status_uids:
+                online_count = len(members_set.intersection(online_uids))
+                online_shared = shared_members.intersection(online_uids)
+                online_unique = unique_members.intersection(online_uids)
+                online = {
+                    "total_members": online_count,
+                    "shared_members_count": len(online_shared),
+                    "unique_members_count": len(online_unique),
+                    "redundancy_pct": round(len(online_shared) / online_count * 100, 1) if online_count else None,
+                    "shared_members": list(online_shared),
+                    "unique_members": list(online_unique),
+                    "overlaps": online_overlaps,
+                    "unknown_members_count": len(members_set.difference(known_status_uids))
+                }
+
             group_list.append({
                 "gid": gid,
                 "alias": gdata["alias"],
@@ -428,7 +452,8 @@ class SyncshellAnalyzer:
                 "leave_impact": leave_impact,
                 "shared_members": list(shared_members),
                 "unique_members": list(unique_members),
-                "overlaps": overlaps
+                "overlaps": overlaps,
+                "online": online
             })
 
         # Sort groups by unique members count (ascending) to show lowest impact first
@@ -447,6 +472,20 @@ class SyncshellAnalyzer:
             "average_redundancy_pct": round(avg_redundancy, 1),
             "safe_to_leave_gids": safe_to_leave
         }
+
+        if known_status_uids:
+            online_redundancies = [
+                group["online"]["redundancy_pct"] for group in group_list
+                if group["online"]["total_members"]
+            ]
+            summary["online"] = {
+                "total_unique_players": len(online_uids),
+                "unknown_players_count": len(all_uids - known_status_uids),
+                "average_redundancy_pct": (
+                    round(sum(online_redundancies) / len(online_redundancies), 1)
+                    if online_redundancies else None
+                )
+            }
 
         # Build characters list for response
         characters_list = []

@@ -13,7 +13,9 @@ let memberSearchQuery = '';
 let currentSort = 'leave-impact-asc';
 let currentLayout = 'grid';
 let currentCharacterUid = null;
+let onlineOnly = false;
 let networkInstance = null;
+let latestDataRequest = 0;
 
 // DOM Elements
 const els = {
@@ -27,7 +29,9 @@ const els = {
     // Summary Widgets
     metricGroups: document.getElementById('metric-groups'),
     metricPlayers: document.getElementById('metric-players'),
+    metricPlayersLabel: document.getElementById('metric-players-label'),
     metricRedundancy: document.getElementById('metric-redundancy'),
+    metricRedundancyLabel: document.getElementById('metric-redundancy-label'),
     metricSafeLeave: document.getElementById('metric-safe-leave'),
     
     // Drawer Elements
@@ -37,9 +41,13 @@ const els = {
     drawerGroupName: document.getElementById('drawer-group-name'),
     drawerGroupGid: document.getElementById('drawer-group-gid'),
     drawerMetricTotal: document.getElementById('drawer-metric-total'),
+    drawerMetricTotalLabel: document.getElementById('drawer-metric-total-label'),
     drawerMetricUnique: document.getElementById('drawer-metric-unique'),
+    drawerMetricUniqueLabel: document.getElementById('drawer-metric-unique-label'),
     drawerMetricRedundant: document.getElementById('drawer-metric-redundant'),
+    drawerMetricRedundantLabel: document.getElementById('drawer-metric-redundant-label'),
     drawerExplanation: document.getElementById('drawer-explanation'),
+    drawerOnlineSummary: document.getElementById('drawer-online-summary'),
     
     // Tabs & Lists
     tabButtons: document.querySelectorAll('.tab-btn'),
@@ -50,6 +58,8 @@ const els = {
     memberSearch: document.getElementById('member-search'),
     tabCountUniques: document.getElementById('tab-count-uniques'),
     tabCountAll: document.getElementById('tab-count-all'),
+    tabUniquesLabel: document.getElementById('tab-uniques-label'),
+    tabAllLabel: document.getElementById('tab-all-label'),
 
     // Data Source Banner
     dataSourceBanner: document.getElementById('data-source-banner'),
@@ -59,6 +69,7 @@ const els = {
 
     // Sort & Layout View Controls
     sortSelect: document.getElementById('group-sort'),
+    playerScope: document.getElementById('player-scope'),
     viewGridBtn: document.getElementById('view-grid-btn'),
     viewListBtn: document.getElementById('view-list-btn'),
     viewNetworkBtn: document.getElementById('view-network-btn'),
@@ -70,6 +81,7 @@ const els = {
 
 // Fetch Data from Python Backend
 async function fetchData(uid = null) {
+    const request = ++latestDataRequest;
     showLoading(true);
     els.dataStatus.className = 'status-indicator status-loading';
     els.dataStatus.textContent = 'Syncing...';
@@ -79,7 +91,9 @@ async function fetchData(uid = null) {
         const response = await fetch(url);
         if (!response.ok) throw new Error('API server returned error status');
         
-        appData = await response.json();
+        const data = await response.json();
+        if (request !== latestDataRequest) return;
+        appData = data;
         
         // Update status UI
         els.dataStatus.className = 'status-indicator status-online';
@@ -87,27 +101,51 @@ async function fetchData(uid = null) {
         
         // Update stats, character lists, and diagnostics banner
         updateCharacterSelector();
-        updateSummary();
-        updateDiagnosticsBanner();
-        renderGroups();
-        
-        // If drawer is open, refresh it
-        if (activeGroup) {
-            const refreshedGroup = appData.groups.find(g => g.gid === activeGroup.gid);
-            if (refreshedGroup) {
-                openDrawer(refreshedGroup);
-            } else {
-                closeDrawer();
-            }
+        const onlineAvailable = Boolean(appData.summary.online);
+        els.playerScope.querySelector('option[value="online"]').disabled = !onlineAvailable;
+        if (!onlineAvailable) {
+            onlineOnly = false;
+            els.playerScope.value = 'all';
         }
+        updateDiagnosticsBanner();
+        renderAnalysis();
     } catch (err) {
+        if (request !== latestDataRequest) return;
         console.error('Error fetching data:', err);
         els.dataStatus.className = 'status-indicator';
         els.dataStatus.textContent = 'Server Offline';
         alert('Could not connect to local server. Please ensure the Python server is running and try again.');
     } finally {
-        showLoading(false);
+        if (request === latestDataRequest) showLoading(false);
     }
+}
+
+function renderAnalysis() {
+    updateSummary();
+    renderGroups();
+
+    if (activeGroup) {
+        const refreshedGroup = appData.groups.find(g => g.gid === activeGroup.gid);
+        if (refreshedGroup) {
+            openDrawer(refreshedGroup);
+        } else {
+            closeDrawer();
+        }
+    }
+}
+
+function groupStats(group) {
+    return onlineOnly ? group.online : group;
+}
+
+function formatRedundancy(value) {
+    return value == null ? '—' : `${value}%`;
+}
+
+function onlineCount(group) {
+    const unknown = group.online.unknown_members_count;
+    const suffix = unknown ? ` · ${unknown} unknown` : '';
+    return `${group.online.total_members} / ${group.total_members}${suffix}`;
 }
 
 function showLoading(show) {
@@ -116,7 +154,7 @@ function showLoading(show) {
         els.groupsContainer.classList.add('hidden');
     } else {
         els.loadingSpinner.classList.add('hidden');
-        els.groupsContainer.classList.remove('hidden');
+        els.groupsContainer.classList.toggle('hidden', currentLayout === 'network');
     }
 }
 
@@ -149,9 +187,12 @@ function updateCharacterSelector() {
 
 // Update Dashboard Statistics
 function updateSummary() {
-    els.metricGroups.textContent = appData.summary.total_groups || '0';
-    els.metricPlayers.textContent = appData.summary.total_unique_players || '0';
-    els.metricRedundancy.textContent = `${appData.summary.average_redundancy_pct || 0}%`;
+    const summary = onlineOnly ? appData.summary.online : appData.summary;
+    els.metricGroups.textContent = appData.summary.total_groups;
+    els.metricPlayers.textContent = summary.total_unique_players;
+    els.metricPlayersLabel.textContent = onlineOnly ? 'Distinct Online Players' : 'Unique Sync Players';
+    els.metricRedundancy.textContent = formatRedundancy(summary.average_redundancy_pct);
+    els.metricRedundancyLabel.textContent = onlineOnly ? 'Average Online Redundancy' : 'Average Redundancy';
     els.metricSafeLeave.textContent = appData.summary.safe_to_leave_gids ? appData.summary.safe_to_leave_gids.length : '0';
 }
 
@@ -173,7 +214,14 @@ function updateDiagnosticsBanner() {
             </svg>
         `;
         els.bannerTitle.textContent = 'Complete Syncshell Analysis Active';
-        els.bannerDescription.innerHTML = `Group member lists and overlaps are fully loaded from diagnostics report snapshot <strong>${escapeHtml(appData.diagnostics_timestamp)}</strong> (${escapeHtml(appData.diagnostics_file)}).`;
+        const presence = appData.summary.online;
+        let onlineNotice = presence
+            ? 'Online counts reflect this snapshot. Generate a new report and click Refresh Logs to update them.'
+            : 'This report has no online status for syncshell members.';
+        if (presence?.unknown_players_count) {
+            onlineNotice += ` Online status is unknown for ${presence.unknown_players_count} players.`;
+        }
+        els.bannerDescription.innerHTML = `Diagnostics snapshot <strong>${escapeHtml(appData.diagnostics_timestamp)}</strong> (${escapeHtml(appData.diagnostics_file)}). ${onlineNotice}`;
     } else {
         els.dataSourceBanner.classList.add('banner-warning');
         els.bannerIcon.innerHTML = `
@@ -184,7 +232,7 @@ function updateDiagnosticsBanner() {
             </svg>
         `;
         els.bannerTitle.textContent = 'Incremental Log Sync Mode (Incomplete Data)';
-        els.bannerDescription.innerHTML = `FFXIV bootstrap member lists are not logged locally. To perform accurate syncshell overlap calculations, please open your in-game <strong>LightlessSync settings &gt; Diagnostics</strong> and click <strong>"Generate Diagnostics Report"</strong>. Then refresh this examiner.`;
+        els.bannerDescription.innerHTML = `Trace logs provide incomplete memberships and no online status. In FFXIV, open <strong>LightlessSync settings &gt; Diagnostics</strong> and click <strong>Generate Diagnostics Report</strong>, then click <strong>Refresh Logs</strong> here.`;
     }
 }
 
@@ -224,13 +272,13 @@ function renderGroups() {
         } else if (currentSort === 'leave-impact-desc') {
             return b.unique_members_count - a.unique_members_count;
         } else if (currentSort === 'redundancy-desc') {
-            return b.redundancy_pct - a.redundancy_pct;
+            return (groupStats(b).redundancy_pct ?? -1) - (groupStats(a).redundancy_pct ?? -1);
         } else if (currentSort === 'redundancy-asc') {
-            return a.redundancy_pct - b.redundancy_pct;
+            return (groupStats(a).redundancy_pct ?? 101) - (groupStats(b).redundancy_pct ?? 101);
         } else if (currentSort === 'members-desc') {
-            return b.total_members - a.total_members;
+            return groupStats(b).total_members - groupStats(a).total_members;
         } else if (currentSort === 'members-asc') {
-            return a.total_members - b.total_members;
+            return groupStats(a).total_members - groupStats(b).total_members;
         } else if (currentSort === 'name-asc') {
             return a.name.localeCompare(b.name);
         }
@@ -248,6 +296,7 @@ function renderGroups() {
     }
     
     filtered.forEach(group => {
+        const stats = groupStats(group);
         const card = document.createElement('div');
         card.className = `group-card impact-${group.leave_impact.toLowerCase()}`;
         card.id = `group-card-${group.gid}`;
@@ -256,7 +305,7 @@ function renderGroups() {
         let impactBadgeClass = `badge-impact-${group.leave_impact.toLowerCase()}`;
         
         // Redundancy fill % representation
-        const barWidth = group.redundancy_pct;
+        const barWidth = stats.redundancy_pct ?? 0;
         
         card.innerHTML = `
             <div class="card-header">
@@ -264,26 +313,26 @@ function renderGroups() {
                     <h3>${escapeHtml(group.name)}</h3>
                     <span class="gid">${group.gid}</span>
                 </div>
-                <span class="badge ${impactBadgeClass}">${group.leave_impact} Impact</span>
+                <span class="badge ${impactBadgeClass}" title="Leave impact across all players">${group.leave_impact} Impact</span>
             </div>
             <div class="card-body">
                 <div class="stat-row">
-                    <span class="label">Synced Players</span>
-                    <span class="val">${group.total_members}</span>
+                    <span class="label">${group.online ? 'Online / total players' : 'Synced Players'}</span>
+                    <span class="val">${group.online ? onlineCount(group) : group.total_members}</span>
                 </div>
                 <div class="stat-row">
-                    <span class="label">Shared with other groups</span>
-                    <span class="val">${group.shared_members_count}</span>
+                    <span class="label">${onlineOnly ? 'Shared online players' : 'Shared with other groups'}</span>
+                    <span class="val">${stats.shared_members_count}</span>
                 </div>
                 <div class="stat-row">
-                    <span class="label">Unique to this group</span>
-                    <span class="val text-warning">${group.unique_members_count}</span>
+                    <span class="label">${group.online ? 'Unique online / total' : 'Unique to this group'}</span>
+                    <span class="val text-warning">${group.online ? `${group.online.unique_members_count} / ${group.unique_members_count}` : group.unique_members_count}</span>
                 </div>
                 
                 <div class="redundancy-progress-container">
                     <div class="progress-header">
-                        <span>Redundancy Ratio</span>
-                        <span>${group.redundancy_pct}%</span>
+                        <span>${onlineOnly ? 'Online Redundancy' : 'Redundancy Ratio'}</span>
+                        <span>${formatRedundancy(stats.redundancy_pct)}</span>
                     </div>
                     <div class="progress-bar-bg">
                         <div class="progress-bar-fill" style="width: ${barWidth}%"></div>
@@ -307,29 +356,27 @@ function renderGroups() {
 // Open Detail Drawer
 function openDrawer(group) {
     activeGroup = group;
+    const stats = groupStats(group);
     els.drawerGroupName.textContent = group.name;
     els.drawerGroupGid.textContent = group.gid;
     
-    els.drawerMetricTotal.textContent = group.total_members;
-    els.drawerMetricUnique.textContent = group.unique_members_count;
-    els.drawerMetricRedundant.textContent = `${group.redundancy_pct}%`;
-    
-    // Summary of Leave impact explanation
-    let explanation = '';
-    if (group.unique_members_count === 0) {
-        explanation = `<strong>Zero Leave Impact:</strong> Every single player in <em>${escapeHtml(group.name)}</em> is already synced with you through at least one of your other syncshells. Leaving this group will **NOT** cause you to lose connection to any synced players.`;
-    } else if (group.leave_impact === 'Low') {
-        explanation = `<strong>Low Leave Impact:</strong> Leaving this group will cause you to lose connection to <strong>${group.unique_members_count}</strong> unique player(s) who are not synced through any other groups. The other ${group.shared_members_count} players will remain synced.`;
-    } else if (group.leave_impact === 'Medium') {
-        explanation = `<strong>Medium Leave Impact:</strong> Leaving this group will disconnect you from <strong>${group.unique_members_count}</strong> unique players who only share this syncshell with you. You have ${group.shared_members_count} redundant players here.`;
-    } else {
-        explanation = `<strong>High Leave Impact:</strong> This group is highly unique! Leaving it will cause you to lose connection to <strong>${group.unique_members_count}</strong> unique players. It is recommended to keep this group unless you clean up or migrate these unique players first.`;
+    els.drawerMetricTotal.textContent = stats.total_members;
+    els.drawerMetricTotalLabel.textContent = onlineOnly ? 'Online Players' : 'Total Members';
+    els.drawerMetricUnique.textContent = stats.unique_members_count;
+    els.drawerMetricUniqueLabel.textContent = onlineOnly ? 'Unique Online Players' : 'Unique Members';
+    els.drawerMetricRedundant.textContent = formatRedundancy(stats.redundancy_pct);
+    els.drawerMetricRedundantLabel.textContent = onlineOnly ? 'Online Redundancy' : 'Redundancy';
+    els.drawerOnlineSummary.hidden = !group.online;
+    if (group.online) {
+        els.drawerOnlineSummary.textContent = `Online / total players: ${onlineCount(group)}. Unique online players: ${group.online.unique_members_count}.`;
     }
-    els.drawerExplanation.innerHTML = explanation;
+    els.drawerExplanation.textContent = `Leave impact across all players: ${group.leave_impact}. Leaving this group would remove syncshell coverage for ${group.unique_members_count} unique players in the analyzed data.`;
     
     // Tab badge counters
-    els.tabCountUniques.textContent = group.unique_members_count;
-    els.tabCountAll.textContent = group.total_members;
+    els.tabUniquesLabel.textContent = onlineOnly ? 'Unique online players' : 'Unique players';
+    els.tabAllLabel.textContent = onlineOnly ? 'Online players' : 'All players';
+    els.tabCountUniques.textContent = stats.unique_members_count;
+    els.tabCountAll.textContent = stats.total_members;
     
     // Reset member search within drawer
     els.memberSearch.value = '';
@@ -352,10 +399,11 @@ function closeDrawer() {
 // Render Lists inside the Drawer depending on the group and active search
 function renderDrawerTabs() {
     if (!activeGroup) return;
+    const stats = groupStats(activeGroup);
     
     // 1. Render Overlaps Tab
     els.overlapsList.innerHTML = '';
-    const sortedOverlaps = Object.entries(activeGroup.overlaps)
+    const sortedOverlaps = Object.entries(stats.overlaps)
         .map(([gid, count]) => {
             const targetGroup = appData.groups.find(g => g.gid === gid);
             return {
@@ -367,7 +415,7 @@ function renderDrawerTabs() {
         .sort((a, b) => b.count - a.count);
         
     if (sortedOverlaps.length === 0) {
-        els.overlapsList.innerHTML = `<div class="no-data-msg">No member overlaps with any other syncshells.</div>`;
+        els.overlapsList.innerHTML = `<div class="no-data-msg">No ${onlineOnly ? 'online ' : ''}players shared with other syncshells.</div>`;
     } else {
         sortedOverlaps.forEach(o => {
             const li = document.createElement('li');
@@ -377,7 +425,7 @@ function renderDrawerTabs() {
                     <span class="name-bold">${escapeHtml(o.name)}</span>
                     <span class="uid-sub">${o.gid}</span>
                 </div>
-                <span class="overlap-count">${o.count} shared players</span>
+                <span class="overlap-count">${o.count} shared ${onlineOnly ? 'online ' : ''}players</span>
             `;
             // Add click event to pivot to that group details
             li.addEventListener('click', () => {
@@ -402,10 +450,10 @@ function renderDrawerTabs() {
 
     // 2. Render Uniques Tab
     els.uniquesList.innerHTML = '';
-    if (activeGroup.unique_members.length === 0) {
-        els.uniquesList.innerHTML = `<div class="no-data-msg" style="color:var(--impact-none); font-weight:600;">No unique players! Safe to leave.</div>`;
+    if (stats.unique_members.length === 0) {
+        els.uniquesList.innerHTML = `<div class="no-data-msg">No unique ${onlineOnly ? 'online ' : ''}players in the analyzed data.</div>`;
     } else {
-        activeGroup.unique_members.forEach(uid => {
+        stats.unique_members.forEach(uid => {
             const name = appData.members[uid] || uid;
             const li = document.createElement('li');
             li.innerHTML = `
@@ -422,13 +470,14 @@ function renderDrawerTabs() {
 
 function renderAllPlayersTab() {
     els.allMembersList.innerHTML = '';
+    const stats = groupStats(activeGroup);
     
     // Sort all members by name
-    const sortedMembers = [...activeGroup.shared_members, ...activeGroup.unique_members]
+    const sortedMembers = [...stats.shared_members, ...stats.unique_members]
         .map(uid => ({
             uid,
             name: appData.members[uid] || uid,
-            isUnique: activeGroup.unique_members.includes(uid)
+            isUnique: stats.unique_members.includes(uid)
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
         
@@ -489,6 +538,11 @@ els.sortSelect.addEventListener('change', (e) => {
     renderGroups();
 });
 
+els.playerScope.addEventListener('change', (e) => {
+    onlineOnly = e.target.value === 'online';
+    renderAnalysis();
+});
+
 els.characterSelect.addEventListener('change', (e) => {
     currentCharacterUid = e.target.value;
     fetchData(currentCharacterUid);
@@ -531,8 +585,8 @@ els.tabButtons.forEach(btn => {
         els.tabButtons.forEach(b => b.classList.remove('active'));
         els.tabPanes.forEach(p => p.classList.remove('active'));
         
-        e.target.classList.add('active');
-        const tabId = e.target.getAttribute('data-tab');
+        e.currentTarget.classList.add('active');
+        const tabId = e.currentTarget.getAttribute('data-tab');
         document.getElementById(tabId).classList.add('active');
         activeTab = tabId;
     });
@@ -556,19 +610,18 @@ fetchData();
 
 // Render Network Graph Visualization using Vis-Network
 function renderNetworkGraph() {
-    if (!appData.groups || appData.groups.length === 0) return;
-
     if (networkInstance) {
         networkInstance.destroy();
         networkInstance = null;
     }
 
     const container = document.getElementById('network-graph');
-    if (!container) return;
+    if (!container || appData.groups.length === 0) return;
 
     // Build Nodes
     const nodes = [];
     appData.groups.forEach(group => {
+        const stats = groupStats(group);
         // Map Leave Impact to Color
         let borderColor = '#3b82f6'; // Low impact (default)
         if (group.leave_impact === 'None') borderColor = '#10b981';
@@ -577,7 +630,7 @@ function renderNetworkGraph() {
 
         // Size calculation based on player counts
         // Standardize sizes between 15 and 45 for clear legibility
-        const size = Math.max(15, Math.min(45, 10 + Math.sqrt(group.total_members) * 2.5));
+        const size = Math.max(15, Math.min(45, 10 + Math.sqrt(stats.total_members) * 2.5));
 
         nodes.push({
             id: group.gid,
@@ -606,13 +659,16 @@ function renderNetworkGraph() {
             },
             title: (() => {
                 const el = document.createElement('div');
+                const presence = group.online
+                    ? `Online / total players: ${onlineCount(group)}<br>Unique online players: ${group.online.unique_members_count}<br>`
+                    : `Synced players: ${group.total_members}<br>`;
                 el.innerHTML = `<strong>${escapeHtml(group.name)}</strong><br>` +
                                `<span style="font-family: monospace; font-size: 0.8rem; color: #94a3b8;">${group.gid}</span><br>` +
                                `<hr style="border: 0; border-top: 1px solid #24324f; margin: 4px 0;">` +
-                               `Synced Players: ${group.total_members}<br>` +
-                               `Unique Players: ${group.unique_members_count}<br>` +
-                               `Redundancy: ${group.redundancy_pct}%<br>` +
-                               `Leave Impact: <strong style="color: ${borderColor}">${group.leave_impact}</strong>`;
+                               presence +
+                               `Unique players (all): ${group.unique_members_count}<br>` +
+                               `${onlineOnly ? 'Online redundancy' : 'Redundancy'}: ${formatRedundancy(stats.redundancy_pct)}<br>` +
+                               `Leave impact (all players): <strong style="color: ${borderColor}">${group.leave_impact}</strong>`;
                 return el;
             })()
         });
@@ -623,8 +679,7 @@ function renderNetworkGraph() {
     const addedEdges = new Set();
 
     appData.groups.forEach(group => {
-        if (!group.overlaps) return;
-        Object.entries(group.overlaps).forEach(([otherGid, sharedCount]) => {
+        Object.entries(groupStats(group).overlaps).forEach(([otherGid, sharedCount]) => {
             if (sharedCount === 0) return;
 
             // Normalize edge identification to avoid bidirectional duplicates (e.g. A->B and B->A)
@@ -656,7 +711,7 @@ function renderNetworkGraph() {
                 },
                 title: (() => {
                     const el = document.createElement('div');
-                    el.innerHTML = `<strong>${sharedCount} shared players</strong><br>` +
+                    el.innerHTML = `<strong>${sharedCount} shared ${onlineOnly ? 'online ' : ''}players</strong><br>` +
                                    `<span style="font-size: 0.8rem; color: #94a3b8;">between ${escapeHtml(group.name)} and ${escapeHtml(targetName)}</span>`;
                     return el;
                 })()

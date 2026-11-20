@@ -613,6 +613,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 0.5rem;
     font-size: 0.85rem;
     margin-bottom: 0.5rem;
 }
@@ -829,6 +830,10 @@ body {
     font-size: 0.9rem;
     color: var(--color-text-main);
     line-height: 1.4;
+}
+
+#drawer-online-summary {
+    margin-bottom: 0.5rem;
 }
 
 /* Tabs */

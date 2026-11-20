@@ -74,7 +74,7 @@
                 </div>
                 <div class="metric-info">
                     <h3 id="metric-players">-</h3>
-                    <p>Unique Sync Players</p>
+                    <p id="metric-players-label">Unique Sync Players</p>
                 </div>
             </div>
             <div class="metric-card">
@@ -83,7 +83,7 @@
                 </div>
                 <div class="metric-info">
                     <h3 id="metric-redundancy">-</h3>
-                    <p>Average Redundancy</p>
+                    <p id="metric-redundancy-label">Average Redundancy</p>
                 </div>
             </div>
             <div class="metric-card highlight-metric">
@@ -116,6 +116,14 @@
                     </div>
 
                     <div class="control-item">
+                        <label class="filter-label" for="player-scope">Analyze:</label>
+                        <select id="player-scope" class="sort-select">
+                            <option value="all">All players</option>
+                            <option value="online" disabled>Online players</option>
+                        </select>
+                    </div>
+
+                    <div class="control-item">
                         <span class="filter-label">Leave Impact:</span>
                         <div class="filter-buttons">
                             <button class="btn btn-filter active" data-filter="all">All</button>
@@ -133,8 +141,8 @@
                             <option value="leave-impact-desc">Leave Impact (High to Low)</option>
                             <option value="redundancy-desc">Redundancy (High to Low)</option>
                             <option value="redundancy-asc">Redundancy (Low to High)</option>
-                            <option value="members-desc">Synced Players (Most to Least)</option>
-                            <option value="members-asc">Synced Players (Least to Most)</option>
+                            <option value="members-desc">Player Count (Most to Least)</option>
+                            <option value="members-asc">Player Count (Least to Most)</option>
                             <option value="name-asc">Name (A-Z)</option>
                         </select>
                     </div>
@@ -211,29 +219,30 @@
                 <div class="drawer-metrics">
                     <div class="drawer-metric-box">
                         <span class="value" id="drawer-metric-total">0</span>
-                        <span class="label">Total Members</span>
+                        <span class="label" id="drawer-metric-total-label">Total Members</span>
                     </div>
                     <div class="drawer-metric-box">
                         <span class="value text-warning" id="drawer-metric-unique">0</span>
-                        <span class="label">Unique Members</span>
+                        <span class="label" id="drawer-metric-unique-label">Unique Members</span>
                     </div>
                     <div class="drawer-metric-box">
                         <span class="value text-success" id="drawer-metric-redundant">0%</span>
-                        <span class="label">Redundancy</span>
+                        <span class="label" id="drawer-metric-redundant-label">Redundancy</span>
                     </div>
                 </div>
 
                 <!-- Analysis Summary Text -->
                 <div class="analysis-explanation card">
                     <h3>Impact Analysis</h3>
+                    <p id="drawer-online-summary" hidden></p>
                     <p id="drawer-explanation">Calculating...</p>
                 </div>
 
                 <!-- Tab Header -->
                 <div class="tab-header">
                     <button class="tab-btn active" data-tab="tab-overlaps">Overlap breakdown</button>
-                    <button class="tab-btn" data-tab="tab-uniques">Unique players (<span id="tab-count-uniques">0</span>)</button>
-                    <button class="tab-btn" data-tab="tab-all-members">All players (<span id="tab-count-all">0</span>)</button>
+                    <button class="tab-btn" data-tab="tab-uniques"><span id="tab-uniques-label">Unique players</span> (<span id="tab-count-uniques">0</span>)</button>
+                    <button class="tab-btn" data-tab="tab-all-members"><span id="tab-all-label">All players</span> (<span id="tab-count-all">0</span>)</button>
                 </div>
 
                 <!-- Tab Body Content -->
@@ -254,7 +263,7 @@
                     <div id="tab-uniques" class="tab-pane">
                         <div class="warning-alert">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                            <span>These players are only synced through this group. Leaving will break connection.</span>
+                            <span>These players appear in this syncshell only.</span>
                         </div>
                         <ul id="uniques-list" class="drawer-list member-list">
                             <!-- Injected by JS -->

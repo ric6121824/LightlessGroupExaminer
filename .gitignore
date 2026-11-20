@@ -1,7 +1,31 @@
+# Python bytecode and virtual environments
 __pycache__/
-*.pyc
-LightlessClient/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Test and coverage artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Local diagnostics and logs
+*.log
+lightless_diagnostics_*.zip
+lightless_diagnostics_*.json
+mock_diagnostics.zip
+
+# Local reference checkout
+/LightlessClient/
+
+# Editor and tool settings
 .gemini/
 .idea/
 .vscode/
-*.log
+
+# Operating system files
+Thumbs.db
+Desktop.ini
+.DS_Store

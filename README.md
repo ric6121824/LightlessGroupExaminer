@@ -36,6 +36,10 @@ You need Windows, Python 3 available as `python`, a browser, and an existing Lig
 
 Choose your character, then select a group to inspect its players and overlaps. After generating a new report, click **Refresh Logs** to load it.
 
+Each group shows its **online / total players** and **unique online / total** counts when online status is available. Use **Analyze → Online players** to compare overlaps, redundancy, and member lists for confirmed online players. Leave impact still uses all players.
+
+Online status comes from the diagnostics snapshot. Generate a fresh report and click **Refresh Logs** to update it. Missing statuses are shown as unknown, and reports with no recorded status use **All players**. Groups with zero confirmed online players stay visible, with **—** for online redundancy.
+
 The network graph loads vis-network from unpkg, and the interface loads a font from Google Fonts. Those resources require an internet connection.
 
 ## Data sources
