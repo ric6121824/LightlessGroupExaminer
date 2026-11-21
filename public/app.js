@@ -10,7 +10,8 @@ let currentSearch = '';
 let activeGroup = null;
 let activeTab = 'tab-overlaps';
 let memberSearchQuery = '';
-let currentSort = 'leave-impact-asc';
+let currentSort = 'leave-impact';
+let currentSortDirection = 'asc';
 let currentLayout = 'grid';
 let currentCharacterUid = null;
 let onlineOnly = false;
@@ -21,7 +22,7 @@ let latestDataRequest = 0;
 const els = {
     groupsContainer: document.getElementById('groups-container'),
     searchBar: document.getElementById('group-search'),
-    filterBtns: document.querySelectorAll('.btn-filter'),
+    filterBtns: document.querySelectorAll('.filter-buttons [data-filter]'),
     loadingSpinner: document.getElementById('loading-spinner'),
     refreshBtn: document.getElementById('refresh-btn'),
     dataStatus: document.getElementById('data-status'),
@@ -69,6 +70,7 @@ const els = {
 
     // Sort & Layout View Controls
     sortSelect: document.getElementById('group-sort'),
+    sortDirectionBtns: document.querySelectorAll('[data-sort-direction]'),
     playerScope: document.getElementById('player-scope'),
     viewGridBtn: document.getElementById('view-grid-btn'),
     viewListBtn: document.getElementById('view-list-btn'),
@@ -265,24 +267,36 @@ function renderGroups() {
         return matchSearch && matchFilter;
     });
 
-    // Apply Sort selection
+    // Apply the selected sort key and direction
     filtered.sort((a, b) => {
-        if (currentSort === 'leave-impact-asc') {
-            return a.unique_members_count - b.unique_members_count;
-        } else if (currentSort === 'leave-impact-desc') {
-            return b.unique_members_count - a.unique_members_count;
-        } else if (currentSort === 'redundancy-desc') {
-            return (groupStats(b).redundancy_pct ?? -1) - (groupStats(a).redundancy_pct ?? -1);
-        } else if (currentSort === 'redundancy-asc') {
-            return (groupStats(a).redundancy_pct ?? 101) - (groupStats(b).redundancy_pct ?? 101);
-        } else if (currentSort === 'members-desc') {
-            return groupStats(b).total_members - groupStats(a).total_members;
-        } else if (currentSort === 'members-asc') {
-            return groupStats(a).total_members - groupStats(b).total_members;
-        } else if (currentSort === 'name-asc') {
-            return a.name.localeCompare(b.name);
+        if (currentSort === 'name-asc') {
+            const direction = currentSortDirection === 'asc' ? 1 : -1;
+            return a.name.localeCompare(b.name) * direction;
         }
-        return 0;
+
+        let aValue;
+        let bValue;
+        if (currentSort === 'leave-impact') {
+            aValue = a.unique_members_count;
+            bValue = b.unique_members_count;
+        } else if (currentSort === 'redundancy') {
+            aValue = groupStats(a).redundancy_pct;
+            bValue = groupStats(b).redundancy_pct;
+        } else if (currentSort === 'members') {
+            aValue = groupStats(a).total_members;
+            bValue = groupStats(b).total_members;
+        } else if (currentSort === 'unique-online') {
+            aValue = a.online?.unique_members_count ?? 0;
+            bValue = b.online?.unique_members_count ?? 0;
+        } else {
+            return 0;
+        }
+
+        if (aValue == null && bValue == null) return 0;
+        if (aValue == null) return 1;
+        if (bValue == null) return -1;
+        const direction = currentSortDirection === 'asc' ? 1 : -1;
+        return (aValue - bValue) * direction;
     });
     
     if (filtered.length === 0) {
@@ -535,8 +549,29 @@ els.filterBtns.forEach(btn => {
 
 els.sortSelect.addEventListener('change', (e) => {
     currentSort = e.target.value;
+    updateSortDirectionButtons();
     renderGroups();
 });
+
+els.sortDirectionBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        currentSortDirection = btn.dataset.sortDirection;
+        updateSortDirectionButtons();
+        renderGroups();
+    });
+});
+
+function updateSortDirectionButtons() {
+    const isNameSort = els.sortSelect.value === 'name-asc';
+    els.sortDirectionBtns.forEach(btn => {
+        btn.textContent = isNameSort
+            ? (btn.dataset.sortDirection === 'asc' ? 'A to Z' : 'Z to A')
+            : (btn.dataset.sortDirection === 'asc' ? 'Low to High' : 'High to Low');
+        btn.classList.toggle('active', btn.dataset.sortDirection === currentSortDirection);
+    });
+}
+
+updateSortDirectionButtons();
 
 els.playerScope.addEventListener('change', (e) => {
     onlineOnly = e.target.value === 'online';

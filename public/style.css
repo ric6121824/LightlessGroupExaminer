@@ -420,6 +420,21 @@ body {
     gap: 0.5rem;
 }
 
+.sort-direction-buttons {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.sort-direction-buttons .btn-filter {
+    padding: 0.4rem 0.65rem;
+    white-space: nowrap;
+}
+
+.sort-direction-buttons .btn-filter:disabled {
+    cursor: default;
+    opacity: 0.5;
+}
+
 /* Sort Select Dropdown */
 .sort-select {
     background-color: var(--bg-input);

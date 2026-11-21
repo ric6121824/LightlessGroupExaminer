@@ -137,14 +137,16 @@
                     <div class="control-item">
                         <span class="filter-label">Sort:</span>
                         <select id="group-sort" class="sort-select">
-                            <option value="leave-impact-asc">Leave Impact (Low to High)</option>
-                            <option value="leave-impact-desc">Leave Impact (High to Low)</option>
-                            <option value="redundancy-desc">Redundancy (High to Low)</option>
-                            <option value="redundancy-asc">Redundancy (Low to High)</option>
-                            <option value="members-desc">Player Count (Most to Least)</option>
-                            <option value="members-asc">Player Count (Least to Most)</option>
-                            <option value="name-asc">Name (A-Z)</option>
+                            <option value="leave-impact">Leave Impact</option>
+                            <option value="redundancy">Redundancy</option>
+                            <option value="members">Player Count</option>
+                            <option value="unique-online">Unique Online Players</option>
+                            <option value="name-asc">Name</option>
                         </select>
+                        <div class="sort-direction-buttons" role="group" aria-label="Sort direction">
+                            <button class="btn btn-filter" data-sort-direction="desc" type="button">High to Low</button>
+                            <button class="btn btn-filter active" data-sort-direction="asc" type="button">Low to High</button>
+                        </div>
                     </div>
 
                     <div class="control-item">
